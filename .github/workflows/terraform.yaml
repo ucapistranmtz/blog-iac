@@ -1,0 +1,53 @@
+name: "Terraform Infrastructure"
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+
+permissions:
+    contents: read
+
+jobs:
+    terraform:
+        name: "Terraform"
+        runs-on: ubuntu-latest
+
+        env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_REGION: "us-east-1"
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: "1.7.0"
+
+            - name: Terraform Format
+              id: fmt
+              run: terraform fmt -check
+              continue-on-error: true
+
+            - name: Terraform Init
+              id: init
+              run: terraform init
+
+            - name: Terraform Validate
+              id: validate
+              run: terraform validate -no-color
+
+            - name: Terraform Plan
+              id: plan
+              if: github.event_name == 'pull_request' || github.event_name == 'push'
+              run: terraform plan -no-color -input=false
+              continue-on-error: true
+
+            - name: Terraform Apply
+              # Solo se ejecuta si es un push a main (no en Pull Requests)
+              if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+              run: terraform apply -auto-approve -input=false

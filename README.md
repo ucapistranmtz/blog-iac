@@ -21,3 +21,10 @@ brew install hashicorp/tap/terraform
 ```
 terraform -install-autocomplete
 ```
+
+# Execute the bootstrap script
+
+```
+ chmod +x bootstrap.sh
+./bootstrap.sh
+```

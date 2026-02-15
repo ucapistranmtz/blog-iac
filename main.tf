@@ -65,7 +65,7 @@ resource "aws_s3_bucket_policy" "public_read_policy" {
         Effect    = "Allow"
         Principal = "*"
         Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.tf-blog-website-bucket.arn}"
+        Resource  = "${aws_s3_bucket.tf-blog-website-bucket.arn}/*"
       }
     ]
   })

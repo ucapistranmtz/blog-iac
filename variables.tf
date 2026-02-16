@@ -22,6 +22,3 @@ variable "environment" {
   type        = string
   default     = "dev" # dev,stage,prod
 }
-
-
- 

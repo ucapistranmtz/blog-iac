@@ -20,6 +20,14 @@ resource "aws_lambda_function" "auth_handler" {
   filename         = data.archive_file.auth_placeholder.output_path
   source_code_hash = data.archive_file.auth_placeholder.output_base64sha256
 
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash,
+      last_modified,
+    ]
+  }
+
   environment {
     variables = {
       DATABASE_URL         = var.database_url

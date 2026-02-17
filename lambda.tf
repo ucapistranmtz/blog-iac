@@ -1,3 +1,15 @@
+
+resource "aws_s3_object" "auth_placeholder_upload" {
+  bucket = aws_s3_bucket.artifacts_storage.id
+  key    = "auth-handler.zip"
+  source = data.archive_file.auth_placeholder.output_path
+
+  lifecycle {
+    ignore_changes = [source, etag]
+  }
+}
+
+
 resource "aws_lambda_function" "auth_handler" {
   function_name = "${var.project_name}-auth-handler"
   role          = aws_iam_role.auth_lambda_role.arn
@@ -8,7 +20,9 @@ resource "aws_lambda_function" "auth_handler" {
   s3_bucket = "blog-website-artifacts"
   s3_key    = "auth-handler.zip"
 
+
   s3_object_version = aws_s3_object.auth_placeholder_upload.version_id
+
 
   depends_on = [aws_s3_object.auth_placeholder_upload]
 
@@ -16,6 +30,7 @@ resource "aws_lambda_function" "auth_handler" {
     ignore_changes = [
       s3_key,
       source_code_hash,
+      last_modified,
       s3_object_version
     ]
   }

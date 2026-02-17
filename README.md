@@ -38,9 +38,8 @@ graph TD
     end
 
     subgraph GitHub_Actions [🚀 GitHub Actions Pipeline]
-        GA_ZIP["📦 Zip Code"] --> GA_S3["📤 S3 Upload (New Version)"]
-        GA_S3 --> GA_PUB["🏷️ Publish Lambda Version (PR Title)"]
-        GA_PUB --> GA_ALIAS["📍 Update Alias: live"]
+        A["🔐 Secrets: DB_URL, AUTH_SECRET"] --> B["⚙️ Terraform Plan/Apply"]
+        GA_NEW["🏷️ GitHub Action: Publish Version & Alias"] --> L_ALIAS
     end
 
     subgraph AWS_Cloud [☁️ AWS Cloud - us-east-1]
@@ -48,23 +47,28 @@ graph TD
         subgraph Gateway_Layer [⛩️ Entry Point]
             GW["🌐 API Gateway: blog-api"]
             ST["📝 Stage: $default"]
-            RT["🛣️ Route: /api/auth/{proxy+}"]
+            RT_NEW["🛣️ Route: /api/auth/{proxy+}"]
 
             GW --> ST
-            ST --> RT
+            ST --> RT_NEW
         end
 
         subgraph Storage_Layer [🪣 Storage & State]
-            S1["📦 S3: Terraform State"]
-            S3_ART["📦 S3: project-artifacts"]
+            S1["📦 S3: Terraform State"] --- B
+            S2_NEW["📦 S3: artifacts-storage (Versions Enabled)"]
+        end
+
+        subgraph IAM_Control [🛡️ IAM & Permissions]
+            C["👥 Group: terraformers"] --- D["👑 Admin Privileges"]
+            E["📜 Auth Lambda Role"] --- F["⚡ Lambda Service"]
         end
 
         subgraph Compute_Layer [🖥️ Compute]
-            L_FUNC["📦 Lambda: auth-handler"]
-            L_VER["🔢 Lambda Versions (V1, V2, V13...)"]
-            L_ALIAS["📍 Alias: live"]
+            F --> G["📦 Lambda: auth-handler"]
+            L_VER["🔢 Lambda Versions (V11, V12, V13...)"]
+            L_ALIAS["📍 Alias: live (Points to Version)"]
 
-            L_FUNC --- L_VER
+            G --- L_VER
             L_VER --- L_ALIAS
             L_ALIAS -- "📖 Reads" --> H["🆔 Env Vars (Neon DB, BetterAuth)"]
         end
@@ -73,25 +77,19 @@ graph TD
             I["👥 Cognito User Pool"] <--> J["🔑 User Pool Client"]
         end
 
-        RT -- "🔗 Integration (Qualifer: live)" --> L_ALIAS
+        RT_NEW -- "🔗 Integration (Qualifier: live)" --> L_ALIAS
     end
 
     subgraph External [🐘 Database]
         K["💎 Neon PostgreSQL"] <--> L_ALIAS
     end
 
-    %% Relaciones de flujo
     User -- "HTTPS Request" --> GW
-    GA_S3 -- "Stores Zip" --> S3_ART
-    GA_ALIAS -- "Points to latest V" --> L_ALIAS
-    L_ALIAS -- "BetterAuth Engine" --> K
 
-    %% Estilo DARK con bordes y letras rojas
-    style GW fill:#000,stroke:#ff0000,stroke-width:2px,color:#ff0000
-    style ST fill:#000,stroke:#ff0000,stroke-width:2px,color:#ff0000
-    style RT fill:#000,stroke:#ff0000,stroke-width:2px,color:#ff0000
-    style L_ALIAS fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style L_VER fill:#000,stroke:#ff0000,stroke-width:1px,color:#ff0000,stroke-dasharray: 5 5
-    style Gateway_Layer fill:#000,stroke:#ff0000,stroke-width:1px,stroke-dasharray: 5 5,color:#ff0000
-    style Compute_Layer fill:#000,stroke:#ff0000,stroke-width:1px,color:#ff0000
+    %% Aplicando ROJO a las novedades de hoy
+    style GA_NEW fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
+    style RT_NEW fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
+    style S2_NEW fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
+    style L_VER fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
+    style L_ALIAS fill:#ffebee,stroke:#f44336,stroke-width:4px,color:#b71c1c
 ```

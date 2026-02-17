@@ -1,4 +1,12 @@
+data "archive_file" "auth_placeholder" {
+  type        = "zip"
+  output_path = "${path.module}/dummy_auth.zip"
 
+  source {
+    content  = "exports.handler= async()=> {return {statusCode:200, body:'Auth Placeholder'}};"
+    filename = "index.js"
+  }
+}
 resource "aws_s3_object" "auth_placeholder_upload" {
   bucket = aws_s3_bucket.artifacts_storage.id
   key    = "auth-handler.zip"

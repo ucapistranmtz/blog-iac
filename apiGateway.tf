@@ -50,7 +50,7 @@ resource "aws_lambda_permission" "api_gtw" {
 
   # IMPORTANTE: El permiso debe ser para el Alias específico
   source_arn = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
-  qualifier  = "live"
+  #qualifier  = "live"
 }
 
 output "api_gateway_url" {

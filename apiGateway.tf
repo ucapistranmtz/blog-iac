@@ -5,10 +5,11 @@ resource "aws_apigatewayv2_api" "blog_api" {
   disable_execute_api_endpoint = false
 
   cors_configuration {
-    allow_origins = ["*"]
-    allow_methods = ["POST", "GET"]
-    allow_headers = ["content-type", "authorization"]
-    max_age       = 30
+    allow_origins     = ["http://localhost:3000"]
+    allow_methods     = ["POST", "GET", "OPTIONS"]
+    allow_headers     = ["content-type", "authorization", "cookie"]
+    allow_credentials = true
+    max_age           = 300
   }
 }
 

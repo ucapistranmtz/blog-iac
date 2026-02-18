@@ -1,95 +1,90 @@
-# blog-iac
+# 🚀 blog-iac
 
-This project is to build the architecture behind a severless blog using Terraform for IAC
-the services included in are
+This project manages the **Serverless Infrastructure as Code (IaC)** for the blog. It utilizes Terraform to orchestrate a high-performance, event-driven architecture based on AWS best practices.
 
-- AM Policy
-- AWS CDK
-- AWS S3
+## 🛠️ Stack & Services
 
-Steps
+- **Infrastructure:** Terraform (S3 Backend for State)
+- **Identity:** Amazon Cognito (User Pools & Clients)
+- **Compute:** AWS Lambda (Node.js 22 - Post-Confirmation Trigger)
+- **Database:** Amazon DynamoDB (Single Table Design)
+- **Frontend Hosting:** AWS S3 + CloudFront (Static Web Hosting)
 
-## Install Terraform
+## 🏗️ Installation & Setup
+
+### 1. Install Terraform
 
 ```bash
 brew tap hashicorp/tap
 brew install hashicorp/tap/terraform
 ```
 
-## Add Autocomplete feature
+### 2. Bootstrap the environment
 
-```
-terraform -install-autocomplete
-```
-
-# Execute the bootstrap script
-
-```
- chmod +x bootstrap.sh
+```bash
+chmod +x bootstrap.sh
 ./bootstrap.sh
 ```
 
-# Architecture
+### 🗺️ Infrastructure Architecture
 
-```mermaid
-graph TD
+In this version, we removed external dependencies (Neon DB) to favor a fully AWS-native ecosystem. Red nodes indicate the core of the new identity-to-data synchronization flow.
+
+```graph TD
     subgraph External_User [🌐 Internet]
-        User["💻 User / Frontend"]
+        User["💻 User (Next.js on S3)"]
     end
 
     subgraph GitHub_Actions [🚀 GitHub Actions Pipeline]
-        A["🔐 Secrets: DB_URL, AUTH_SECRET"] --> B["⚙️ Terraform Plan/Apply"]
-        GA_NEW["🏷️ GitHub Action: Publish Version & Alias"] --> L_ALIAS
+        B["⚙️ Terraform Plan/Apply"]
+        S1["📦 S3: Terraform State"] --- B
     end
 
     subgraph AWS_Cloud [☁️ AWS Cloud - us-east-1]
 
-        subgraph Gateway_Layer [⛩️ Entry Point]
-            GW["🌐 API Gateway: blog-api"]
-            ST["📝 Stage: $default"]
-            RT_NEW["🛣️ Route: /api/auth/{proxy+}"]
+        subgraph Auth_Identity [🆔 Identity & Trigger]
+            I["👥 Cognito User Pool"]
+            J["🔑 User Pool Client"]
 
-            GW --> ST
-            ST --> RT_NEW
-        end
-
-        subgraph Storage_Layer [🪣 Storage & State]
-            S1["📦 S3: Terraform State"] --- B
-            S2_NEW["📦 S3: artifacts-storage (Versions Enabled)"]
-        end
-
-        subgraph IAM_Control [🛡️ IAM & Permissions]
-            C["👥 Group: terraformers"] --- D["👑 Admin Privileges"]
-            E["📜 Auth Lambda Role"] --- F["⚡ Lambda Service"]
+            I <--> J
         end
 
         subgraph Compute_Layer [🖥️ Compute]
-            F --> G["📦 Lambda: auth-handler"]
-            L_VER["🔢 Lambda Versions (V11, V12, V13...)"]
-            L_ALIAS["📍 Alias: live (Points to Version)"]
+            L["⚡ Lambda: blog-auth-handler"]
+            L_ENV["🔑 Env Vars: TABLE_NAME"]
 
-            G --- L_VER
-            L_VER --- L_ALIAS
-            L_ALIAS -- "📖 Reads" --> H["🆔 Env Vars (Neon DB, BetterAuth)"]
+            I -- "🔥 Trigger: Post-Confirmation" --> L
+            L --- L_ENV
         end
 
-        subgraph Auth_Identity [🆔 Identity]
-            I["👥 Cognito User Pool"] <--> J["🔑 User Pool Client"]
+        subgraph Storage_Layer [📦 Data Persistence]
+            DB["💎 DynamoDB: blog-website-table"]
         end
 
-        RT_NEW -- "🔗 Integration (Qualifier: live)" --> L_ALIAS
+        subgraph IAM_Control [🛡️ IAM & Permissions]
+            Role["📜 Lambda IAM Role"]
+            Pol["✅ Policy: DynamoDB:PutItem"]
+            Role --- Pol
+            L --- Role
+        end
+
     end
 
-    subgraph External [🐘 Database]
-        K["💎 Neon PostgreSQL"] <--> L_ALIAS
-    end
+    %% Flow Connections
+    User -- "1. SignUp / Confirm" --> J
+    L -- "2. Sync User Profile" --> DB
 
-    User -- "HTTPS Request" --> GW
-
-    %% Aplicando ROJO a las novedades de hoy
-    style GA_NEW fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
-    style RT_NEW fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
-    style S2_NEW fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
-    style L_VER fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#b71c1c
-    style L_ALIAS fill:#ffebee,stroke:#f44336,stroke-width:4px,color:#b71c1c
+    %% Highlighted Changes (RED)
+    style I fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style L fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style DB fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style Pol fill:#ffebee,stroke:#ff0000,stroke-width:1px,color:#b71c1c
 ```
+
+### 📝 Key Infrastructure Notes
+
+Identity-First: Users are only persisted to DynamoDB after successful Cognito confirmation.
+
+No RDS/Secrets Manager: Simplified security model using IAM Roles instead of database credentials.
+
+Node.js 22 Runtime: Optimized Lambda environment with AWS SDK v3 pre-installed.

@@ -1,5 +1,9 @@
+# --- Lambda Execution Role ---
+
 resource "aws_iam_role" "auth_lambda_role" {
   name = "${var.project_name}-auth-lambda-role"
+
+  # Trust policy allowing Lambda service to assume this role
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -12,31 +16,57 @@ resource "aws_iam_role" "auth_lambda_role" {
   })
 }
 
+# --- CloudWatch Logs Policy Attachment ---
+
+# Provides basic permissions to upload logs to CloudWatch
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = aws_iam_role.auth_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_policy" "cognito_access" {
-  name = "${var.project_name}-cognito-access"
+# --- Application Specific Permissions ---
+
+# Custom policy for Cognito and DynamoDB access
+resource "aws_iam_policy" "auth_app_access" {
+  name        = "${var.project_name}-auth-app-access"
+  description = "Permissions for Auth Lambda to manage Cognito users and DynamoDB records"
+
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "cognito-idp:AdminGetUser",
-        "cognito-idp:AdminCreateUser",
-        "cognito-idp:AdminUpdateUserAttributes",
-        "cognito-idp:AdminSetUserPassword"
-      ]
-      Resource = aws_cognito_user_pool.pool.arn
-    }]
+    Statement = [
+      {
+        # Permissions for Cognito User Management
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:AdminGetUser",
+          "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminUpdateUserAttributes",
+          "cognito-idp:AdminSetUserPassword",
+          "cognito-idp:SignUp",
+          "cognito-idp:AdminConfirmSignUp"
+        ]
+        Resource = aws_cognito_user_pool.pool.arn
+      },
+      {
+        # Permissions for DynamoDB Data Operations
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query"
+        ]
+        Resource = [
+          aws_dynamodb_table.blog_table.arn,
+          "${aws_dynamodb_table.blog_table.arn}/index/*"
+        ]
+      }
+    ]
   })
 }
 
-
-resource "aws_iam_role_policy_attachment" "attach_cognito" {
+# Attachment of the custom policy to the Lambda role
+resource "aws_iam_role_policy_attachment" "attach_auth_policy" {
   role       = aws_iam_role.auth_lambda_role.name
-  policy_arn = aws_iam_policy.cognito_access.arn
-
+  policy_arn = aws_iam_policy.auth_app_access.arn
 }

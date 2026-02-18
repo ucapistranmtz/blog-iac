@@ -28,8 +28,11 @@ resource "aws_apigatewayv2_stage" "prod" {
 resource "aws_apigatewayv2_integration" "lambda_blog_int" {
   api_id           = aws_apigatewayv2_api.blog_api.id
   integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.auth_handler.invoke_arn
 
+  # Usamos el ARN con el alias :live para producción estable
+  integration_uri = "${aws_lambda_function.auth_handler.arn}:live"
+
+  payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_route" "auth_route" {
@@ -48,7 +51,8 @@ resource "aws_lambda_permission" "api_gtw" {
   function_name = aws_lambda_function.auth_handler.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
-
+  # Agregamos el qualifier para que coincida con el alias
+  qualifier = "live"
 }
 
 

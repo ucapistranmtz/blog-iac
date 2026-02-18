@@ -49,7 +49,7 @@ resource "aws_lambda_permission" "api_gtw" {
   principal     = "apigateway.amazonaws.com"
 
   # IMPORTANTE: El permiso debe ser para el Alias específico
-  source_arn = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
+  source_arn = "${aws_apigatewayv2_api.blog_api.execution_arn}/*"
   #qualifier  = "live"
 }
 

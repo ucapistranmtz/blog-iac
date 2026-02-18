@@ -29,7 +29,7 @@ resource "aws_apigatewayv2_integration" "lambda_blog_int" {
   api_id           = aws_apigatewayv2_api.blog_api.id
   integration_type = "AWS_PROXY"
 
-  # Usamos el ARN con el alias :live para producción estable
+  # CAMBIO AQUÍ: Usa .arn en lugar de .invoke_arn
   integration_uri = "${aws_lambda_function.auth_handler.arn}:live"
 
   payload_format_version = "2.0"
@@ -43,18 +43,16 @@ resource "aws_apigatewayv2_route" "auth_route" {
 }
 
 
-#permisions 
-
 resource "aws_lambda_permission" "api_gtw" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.auth_handler.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
-  # Agregamos el qualifier para que coincida con el alias
-  qualifier = "live"
-}
 
+  # IMPORTANTE: El permiso debe ser para el Alias específico
+  source_arn = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
+  qualifier  = "live"
+}
 
 output "api_gateway_url" {
   description = "La URL principal de tu API para el Blog"

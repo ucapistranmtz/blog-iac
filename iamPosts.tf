@@ -24,12 +24,11 @@ resource "aws_iam_role_policy" "posts_lambda_policy" {
         Resource = [
           aws_dynamodb_table.blog_table.arn,
           "${aws_dynamodb_table.blog_table.arn}/index/*"
-
         ]
       },
       {
         Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:Create:LogStream", "logs:PutLogEvents"]
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:*:*:*"
       }
     ]

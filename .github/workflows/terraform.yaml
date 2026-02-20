@@ -24,20 +24,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Debug Environment
+      - name: Setup Node from NVM
+        # Cargamos NVM y lo añadimos al PATH oficial de GitHub Actions
         run: |
-          echo "Current User: $(whoami)"
-          echo "Home Directory: $HOME"
-          if [ -d "$HOME/.nvm" ]; then echo "NVM folder exists"; else echo "NVM folder MISSING"; fi
-          if [ -f "$HOME/.bashrc" ]; then grep "NVM_DIR" "$HOME/.bashrc"; fi
-
-      # Paso opcional para validar la versión de Node en el runner
-      - name: Check Node Version from NVM
-        shell: bash -l {0} # Esto obliga a cargar el perfil del usuario (.bashrc/.bash_profile)
-        run: |
-          node -v
-          npm -v
-
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          # Añade el binario de la versión default al PATH de los siguientes pasos
+          NODE_PATH=$(dirname $(which node))
+          echo "$NODE_PATH" >> $GITHUB_PATH
+          echo "Node version: $(node -v)"
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:

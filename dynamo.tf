@@ -16,13 +16,26 @@ resource "aws_dynamodb_table" "blog_table" {
     type = "S" # String
   }
 
+  # Global Secondary Index for querying data by date or type if needed later
+  # For now, we keep it simple to avoid extra costs.
   attribute {
     name = "SK"
     type = "S" # String
   }
 
-  # Global Secondary Index for querying data by date or type if needed later
-  # For now, we keep it simple to avoid extra costs.
+  global_secondary_index {
+    name     = "SlugIndex"
+    hash_key = "slug" # In AWS Provider 6.x, this is still hash_key, 
+    # but verify if your IDE suggests 'partition_key' 
+    # (though hash_key remains the standard in HCL for now).
+    projection_type = "ALL"
+  }
+
+  # slug attribute 
+  attribute {
+    name = "slug"
+    type = "S" # String
+  }
 
   tags = {
     Name        = "${var.project_name}-main-table"

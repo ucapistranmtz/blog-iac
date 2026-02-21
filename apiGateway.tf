@@ -95,3 +95,32 @@ output "api_gateway_url" {
   description = "The primary URL for the Blog API Gateway"
   value       = aws_apigatewayv2_api.blog_api.api_endpoint
 }
+
+resource "aws_apigatewayv2_authorizer" "cognito_auth" {
+  api_id           = aws_apigatewayv2_api.blog_api.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "cognito-authorizer"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.client.id]
+    issuer   = "https://${aws_cognito_user_pool.pool.endpoint}"
+  }
+}
+
+# Esta ruta sigue siendo pública (Read-only)
+resource "aws_apigatewayv2_route" "posts_get" {
+  api_id    = aws_apigatewayv2_api.blog_api.id
+  route_key = "GET /posts"
+  target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
+}
+
+# Esta ruta requiere un Token JWT válido (Write/Edit)
+resource "aws_apigatewayv2_route" "posts_secure" {
+  api_id    = aws_apigatewayv2_api.blog_api.id
+  route_key = "POST /posts"
+  target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}

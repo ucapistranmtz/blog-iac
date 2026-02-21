@@ -5,9 +5,7 @@ resource "aws_apigatewayv2_api" "blog_api" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    # Replace '*' with your specific CloudFront/Domain URL in production
     allow_origins = ["*"]
-    # Added PATCH and DELETE for our service.py logic (Update and Soft Delete)
     allow_methods = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
     allow_headers = ["content-type", "authorization"]
     max_age       = 300
@@ -21,7 +19,6 @@ resource "aws_apigatewayv2_stage" "prod" {
   name        = "$default"
   auto_deploy = true
 
-  # Throttling to protect your Lambda and DynamoDB limits
   default_route_settings {
     throttling_burst_limit = 10
     throttling_rate_limit  = 5
@@ -38,14 +35,15 @@ resource "aws_apigatewayv2_integration" "auth_integration" {
   payload_format_version = "2.0"
 }
 
-# Posts Lambda Integration (Modular service.py)
+# Posts Lambda Integration
 resource "aws_apigatewayv2_integration" "posts_integration" {
   api_id           = aws_apigatewayv2_api.blog_api.id
   integration_type = "AWS_PROXY"
 
-  # FIX: Change invoke_arn to arn and append :live
-  # This is the standard format for alias integration in HTTP APIs
-  integration_uri = "${aws_lambda_function.posts_handler.arn}:live"
+  # FIX: For Aliases, you MUST use the lambda function's invoke_arn AND append the alias.
+  # Using aws_lambda_function.posts_handler.invoke_arn already includes the /invocations path.
+  # We just need to ensure the alias is part of the ARN reference before it.
+  integration_uri = "${aws_lambda_function.posts_handler.invoke_arn}:live"
 
   payload_format_version = "2.0"
   connection_type        = "INTERNET"
@@ -53,21 +51,18 @@ resource "aws_apigatewayv2_integration" "posts_integration" {
 
 # --- Routes ---
 
-# Auth: Registration
 resource "aws_apigatewayv2_route" "signup" {
   api_id    = aws_apigatewayv2_api.blog_api.id
   route_key = "POST /signup"
   target    = "integrations/${aws_apigatewayv2_integration.auth_integration.id}"
 }
 
-# Posts: Root (GET all, POST new)
 resource "aws_apigatewayv2_route" "posts_root" {
   api_id    = aws_apigatewayv2_api.blog_api.id
   route_key = "ANY /posts"
   target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
 }
 
-# Posts: Item (GET one, PATCH update, DELETE soft-delete)
 resource "aws_apigatewayv2_route" "posts_item" {
   api_id    = aws_apigatewayv2_api.blog_api.id
   route_key = "ANY /posts/{id}"
@@ -76,7 +71,6 @@ resource "aws_apigatewayv2_route" "posts_item" {
 
 # --- Permissions ---
 
-# Permission for Auth Lambda
 resource "aws_lambda_permission" "api_gw_auth" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
@@ -85,14 +79,13 @@ resource "aws_lambda_permission" "api_gw_auth" {
   source_arn    = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
 }
 
-# Permission for Posts Lambda (Specific to 'live' alias)
 resource "aws_lambda_permission" "api_gw_posts" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.posts_handler.function_name
   principal     = "apigateway.amazonaws.com"
 
-  # Qualifier is mandatory when the integration uri includes an alias
+  # This qualifier must match the end of the integration_uri
   qualifier  = "live"
   source_arn = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
 }

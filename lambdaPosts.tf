@@ -8,23 +8,25 @@ data "archive_file" "posts_placeholder" {
   }
 }
 
-
 resource "aws_s3_object" "posts_place_holder_upload" {
   bucket = aws_s3_bucket.artifacts_storage.id
   key    = "posts-handler.zip"
   source = data.archive_file.posts_placeholder.output_path
+
   lifecycle {
     ignore_changes = [source, etag]
   }
-
 }
 
 resource "aws_lambda_function" "posts_handler" {
   function_name = "${var.project_name}-posts-handler"
   role          = aws_iam_role.posts_lambda_role.arn
-  handler       = "lambda_function.lambda_handler" #file.function
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.12"
   memory_size   = 512
+
+  # Enable versioning so aliases like 'live' can point to specific versions
+  publish = true
 
   s3_bucket = aws_s3_bucket.artifacts_storage.id
   s3_key    = "posts-handler.zip"
@@ -44,6 +46,7 @@ resource "aws_lambda_function" "posts_handler" {
   }
 
   lifecycle {
-    ignore_changes = [s3_key, source_code_hash, s3_object_version]
+    # We ignore changes because GitHub Actions (Orange Pi) handles the real deployments
+    ignore_changes = [s3_key, source_code_hash, s3_object_version, last_modified]
   }
-} 
+}

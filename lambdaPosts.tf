@@ -46,12 +46,4 @@ resource "aws_lambda_function" "posts_handler" {
   lifecycle {
     ignore_changes = [s3_key, source_code_hash, s3_object_version]
   }
-}
-
-resource "aws_lambda_permission" "api_gw_posts" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.posts_handler.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
-}
+} 

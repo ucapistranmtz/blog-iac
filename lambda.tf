@@ -63,15 +63,6 @@ resource "aws_lambda_function" "auth_handler" {
 
 # --- Trigger Permissions ---
 
-# Allow API Gateway to invoke the Lambda for the /signup route
-resource "aws_lambda_permission" "api_gw_auth" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth_handler.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
-}
-
 # Allow Cognito to invoke the Lambda for Post-Confirmation triggers
 resource "aws_lambda_permission" "cognito_trigger_permission" {
   statement_id  = "AllowExecutionFromCognito"

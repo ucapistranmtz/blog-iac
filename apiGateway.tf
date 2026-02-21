@@ -35,15 +35,14 @@ resource "aws_apigatewayv2_integration" "auth_integration" {
   payload_format_version = "2.0"
 }
 
-# Posts Lambda Integration
+# --- Posts Lambda Integration ---
+
 resource "aws_apigatewayv2_integration" "posts_integration" {
   api_id           = aws_apigatewayv2_api.blog_api.id
   integration_type = "AWS_PROXY"
 
-  # FIX: For Aliases, you MUST use the lambda function's invoke_arn AND append the alias.
-  # Using aws_lambda_function.posts_handler.invoke_arn already includes the /invocations path.
-  # We just need to ensure the alias is part of the ARN reference before it.
-  integration_uri = "${aws_lambda_function.posts_handler.invoke_arn}:live"
+  # CORRECT FORMAT for HTTP API + Alias: Function ARN + :alias
+  integration_uri = "${aws_lambda_function.posts_handler.arn}:live"
 
   payload_format_version = "2.0"
   connection_type        = "INTERNET"

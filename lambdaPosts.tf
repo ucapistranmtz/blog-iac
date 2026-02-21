@@ -20,7 +20,7 @@ resource "aws_s3_object" "posts_place_holder_upload" {
 }
 
 resource "aws_lambda_function" "posts_handler" {
-  function_name = "${var.project_name}-posts-hander"
+  function_name = "${var.project_name}-posts-handler"
   role          = aws_iam_role.posts_lambda_role.arn
   handler       = "lambda_function.lambda_handler" #file.function
   runtime       = "python3.12"

@@ -25,6 +25,20 @@ resource "aws_apigatewayv2_stage" "prod" {
   }
 }
 
+# --- Authorizer ---
+
+resource "aws_apigatewayv2_authorizer" "cognito_auth" {
+  api_id           = aws_apigatewayv2_api.blog_api.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "cognito-authorizer"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.client.id]
+    issuer   = "https://${aws_cognito_user_pool.pool.endpoint}"
+  }
+}
+
 # --- Integrations ---
 
 # Auth Lambda Integration
@@ -35,13 +49,12 @@ resource "aws_apigatewayv2_integration" "auth_integration" {
   payload_format_version = "2.0"
 }
 
-# --- Posts Lambda Integration ---
-
+# Posts Lambda Integration
 resource "aws_apigatewayv2_integration" "posts_integration" {
   api_id           = aws_apigatewayv2_api.blog_api.id
   integration_type = "AWS_PROXY"
 
-  # CORRECT FORMAT for HTTP API + Alias: Function ARN + :alias
+  # Integration with the 'live' alias for stable deployments
   integration_uri = "${aws_lambda_function.posts_handler.arn}:live"
 
   payload_format_version = "2.0"
@@ -50,22 +63,44 @@ resource "aws_apigatewayv2_integration" "posts_integration" {
 
 # --- Routes ---
 
+# 1. Auth Routes
 resource "aws_apigatewayv2_route" "signup" {
   api_id    = aws_apigatewayv2_api.blog_api.id
   route_key = "POST /signup"
   target    = "integrations/${aws_apigatewayv2_integration.auth_integration.id}"
 }
 
-resource "aws_apigatewayv2_route" "posts_root" {
+# 2. Public Post Routes (No Token Required)
+resource "aws_apigatewayv2_route" "posts_get_all" {
   api_id    = aws_apigatewayv2_api.blog_api.id
-  route_key = "ANY /posts"
+  route_key = "GET /posts"
   target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
 }
 
-resource "aws_apigatewayv2_route" "posts_item" {
+resource "aws_apigatewayv2_route" "posts_get_one" {
+  api_id    = aws_apigatewayv2_api.blog_api.id
+  route_key = "GET /posts/{id}"
+  target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
+}
+
+# 3. Secure Post Routes (JWT Token Required)
+resource "aws_apigatewayv2_route" "posts_create" {
+  api_id    = aws_apigatewayv2_api.blog_api.id
+  route_key = "POST /posts"
+  target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}
+
+# This route handles PATCH and DELETE for posts, ensuring soft delete is secure
+resource "aws_apigatewayv2_route" "posts_item_secure" {
   api_id    = aws_apigatewayv2_api.blog_api.id
   route_key = "ANY /posts/{id}"
   target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
 }
 
 # --- Permissions ---
@@ -84,7 +119,6 @@ resource "aws_lambda_permission" "api_gw_posts" {
   function_name = aws_lambda_function.posts_handler.function_name
   principal     = "apigateway.amazonaws.com"
 
-  # This qualifier must match the end of the integration_uri
   qualifier  = "live"
   source_arn = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
 }
@@ -94,33 +128,4 @@ resource "aws_lambda_permission" "api_gw_posts" {
 output "api_gateway_url" {
   description = "The primary URL for the Blog API Gateway"
   value       = aws_apigatewayv2_api.blog_api.api_endpoint
-}
-
-resource "aws_apigatewayv2_authorizer" "cognito_auth" {
-  api_id           = aws_apigatewayv2_api.blog_api.id
-  authorizer_type  = "JWT"
-  identity_sources = ["$request.header.Authorization"]
-  name             = "cognito-authorizer"
-
-  jwt_configuration {
-    audience = [aws_cognito_user_pool_client.client.id]
-    issuer   = "https://${aws_cognito_user_pool.pool.endpoint}"
-  }
-}
-
-# Esta ruta sigue siendo pública (Read-only)
-resource "aws_apigatewayv2_route" "posts_get" {
-  api_id    = aws_apigatewayv2_api.blog_api.id
-  route_key = "GET /posts"
-  target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
-}
-
-# Esta ruta requiere un Token JWT válido (Write/Edit)
-resource "aws_apigatewayv2_route" "posts_secure" {
-  api_id    = aws_apigatewayv2_api.blog_api.id
-  route_key = "POST /posts"
-  target    = "integrations/${aws_apigatewayv2_integration.posts_integration.id}"
-
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
 }

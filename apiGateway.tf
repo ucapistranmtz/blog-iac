@@ -11,11 +11,27 @@ resource "aws_apigatewayv2_api" "blog_api" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "api_gw" {
+  name              = "/aws/api-gw/${aws_apigatewayv2_api.blog_api.name}"
+  retention_in_days = 7
+}
 # --- API Stages ---
 resource "aws_apigatewayv2_stage" "prod" {
   api_id      = aws_apigatewayv2_api.blog_api.id
-  name        = "$default"
+  name        = "$default" # Ojo: asegúrate de que sea el nombre correcto que usas
   auto_deploy = true
+
+  # Forzamos límites altos para limpiar el bloqueo previo
+  default_route_settings {
+    throttling_burst_limit = 500
+    throttling_rate_limit  = 1000
+  }
+
+  # Opcional: Útil para ver qué está pasando realmente en CloudWatch
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw.arn
+    format          = "$context.identity.sourceIp - $context.authorizer.error - $context.status - $context.error.messageType"
+  }
 }
 
 # --- Authorizer ---

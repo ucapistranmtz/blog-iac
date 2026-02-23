@@ -11,10 +11,6 @@ resource "aws_apigatewayv2_api" "blog_api" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "api_gw" {
-  name              = "/aws/api-gw/${aws_apigatewayv2_api.blog_api.name}"
-  retention_in_days = 7
-}
 # --- API Stages ---
 resource "aws_apigatewayv2_stage" "prod" {
   api_id      = aws_apigatewayv2_api.blog_api.id
@@ -27,11 +23,6 @@ resource "aws_apigatewayv2_stage" "prod" {
     throttling_rate_limit  = 1000
   }
 
-  # Opcional: Útil para ver qué está pasando realmente en CloudWatch
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gw.arn
-    format          = "$context.identity.sourceIp - $context.authorizer.error - $context.status - $context.error.messageType"
-  }
 }
 
 # --- Authorizer ---

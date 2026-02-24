@@ -20,6 +20,12 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: "us-east-1"
+      # Mapeo de Secretos a Variables de Terraform
+      TF_VAR_admin_email: ${{ secrets.ADMIN_EMAIL }}
+      TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
+      TF_VAR_admin_name: ${{ secrets.ADMIN_NAME }} # Asegúrate de tener este secreto
+      TF_VAR_database_url: ${{secrets.DATABASE_URL}}
+      TF_VAR_better_auth_secret: ${{secrets.BETTER_AUTH_SECRET}}
 
     steps:
       - name: Checkout
@@ -58,10 +64,8 @@ jobs:
         run: terraform plan -no-color -input=false
         continue-on-error: true
 
-      - name: Terraform Apply
-        env:
-          TF_VAR_database_url: ${{secrets.DATABASE_URL}}
-          TF_VAR_better_auth_secret: ${{secrets.BETTER_AUTH_SECRET}}
+      - name: Terraform Apply        
+           
         # Solo se ejecuta si es un push a main (no en Pull Requests)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve -input=false

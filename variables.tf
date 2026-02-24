@@ -28,3 +28,20 @@ variable "bucket_name" {
 
 # --- REMOVED: database_url (Neon is no longer used) ---
 # --- REMOVED: better_auth_secret (Better Auth is no longer used) ---
+
+
+#--- Admin user ----#
+variable "admin_email" {
+  type      = string
+  sensitive = true
+}
+
+variable "admin_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "admin_name" {
+  type      = string
+  sensitive = true
+}

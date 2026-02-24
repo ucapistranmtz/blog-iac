@@ -93,3 +93,45 @@ output "cognito_domain" {
   description = "The custom domain for Cognito authentication"
   value       = "${aws_cognito_user_pool_domain.auth_domain.domain}.auth.${var.aws_region}.amazoncognito.com"
 }
+
+#--- Admin user ----#
+
+
+resource "aws_cognito_user" "admin_user" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  username     = var.admin_email
+  password     = var.admin_password
+
+
+  attributes = {
+    email          = var.admin_email
+    email_verified = true
+    name           = var.admin_name
+  }
+  message_action = "SUPPRESS"
+}
+
+
+#--- Cognito groups----- #
+resource "aws_cognito_user_group" "admins" {
+  name         = "admins"
+  user_pool_id = aws_cognito_user_pool.pool.id
+  description  = "Group with permissions to create and edit posts"
+  precedence   = 1
+}
+
+
+resource "aws_cognito_user_group" "subscribers" {
+  name         = "subscribers"
+  user_pool_id = aws_cognito_user_pool.pool.id
+  description  = "Users who can read and comment posts"
+  precedence   = 1
+}
+
+
+resource "aws_cognito_user_in_group" "admin_association" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  group_name   = aws_cognito_user_group.admins.name
+  username     = aws_cognito_user.admin_user.username
+
+}

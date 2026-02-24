@@ -64,6 +64,7 @@ jobs:
           TF_VAR_better_auth_secret: ${{secrets.BETTER_AUTH_SECRET}}
           TF_VAR_admin_email: ${{secrets.ADMIN_EMAIL}}
           TF_VAR_admin_password: ${{secrets.ADMIN_PASSWORD}}
+          TF_VAR_admin_name: ${{secrets.ADMIN_NAME}}
         # Solo se ejecuta si es un push a main (no en Pull Requests)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve -input=false

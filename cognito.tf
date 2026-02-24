@@ -93,3 +93,22 @@ output "cognito_domain" {
   description = "The custom domain for Cognito authentication"
   value       = "${aws_cognito_user_pool_domain.auth_domain.domain}.auth.${var.aws_region}.amazoncognito.com"
 }
+
+#--- Admin user ----#
+
+
+resource "aws_cognito_user" "admin_user" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  username     = var.admin_email
+  password     = var.admin_password
+
+
+  attributes = {
+    email          = var.admin_email
+    email_verified = true
+    name           = var.admin_name
+  }
+
+  message_action = "SUPRESS"
+
+}

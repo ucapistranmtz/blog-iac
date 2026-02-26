@@ -44,16 +44,22 @@ resource "aws_lambda_function" "posts_handler" {
       SLUG_INDEX = "SlugIndex"
     }
   }
-  layers = [aws_lambda_layer_version.ulid_layer.arn]
   lifecycle {
     # We ignore changes because GitHub Actions (Orange Pi) handles the real deployments
     ignore_changes = [s3_key, source_code_hash, s3_object_version, last_modified]
   }
 }
 
+# Solo crea la Layer, no la asignes a la Lambda aquí
 resource "aws_lambda_layer_version" "ulid_layer" {
   layer_name          = "ulid-layer"
-  # Puedes subir este zip también a S3 o tenerlo local
-  filename            = "${path.module}/ulid_layer.zip" 
+  filename            = "ulid_layer.zip" 
   compatible_runtimes = ["python3.12"]
+}
+
+# Opcional: Guarda el ARN en un parámetro para que el otro repo lo lea
+resource "aws_ssm_parameter" "ulid_layer_arn" {
+  name  = "/blog/layers/ulid_arn"
+  type  = "String"
+  value = aws_lambda_layer_version.ulid_layer.arn
 }

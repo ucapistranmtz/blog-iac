@@ -37,13 +37,23 @@ graph TD
     end
 
     subgraph GitHub_Actions [🚀 GitHub Actions Pipeline]
-        Runner["🍊 Orange Pi Runner (Node 22/23)"]
+        Runner["🍊 Orange Pi Runner (Node 22)"]
         B["⚙️ Terraform Plan/Apply"]
         Runner --> B
         S1["📦 S3: Terraform State"] --- B
+        Invalidate["♻️ CF Invalidation"] --> CF_W
     end
 
     subgraph AWS_Cloud [☁️ AWS Cloud - us-east-1]
+
+        subgraph Edge_Distribution [⚡ CloudFront Edge]
+            CF_W["🌍 CF: Website Distribution"]
+            CF_M["🖼️ CF: Media Distribution"]
+            SHP["🛡️ Security Headers Policy"]
+
+            CF_W --- SHP
+            CF_M --- SHP
+        end
 
         subgraph Entry_Point [🌐 API & Gateway]
             AGW["🔗 API Gateway (HTTP API)"]
@@ -52,52 +62,53 @@ graph TD
         subgraph Auth_Identity [🆔 Identity]
             I["👥 Cognito User Pool"]
             J["🔑 User Pool Client"]
-            I <--> J
         end
 
         subgraph Compute_Layer [🖥️ Compute]
-            L_AUTH["⚡ Lambda (Python): blog-auth-handler"]
-            L_POSTS["🐍 Lambda (Python): blog-posts-handler"]
-            L_IMG["🟦 Lambda (TS/Node 22): blog-image-handler"]
-
-            I -- "Trigger: Post-Confirmation" --> L_AUTH
+            L_AUTH["⚡ Lambda: blog-auth-handler"]
+            L_POSTS["🐍 Lambda: blog-posts-handler"]
+            L_IMG["🟦 Lambda: blog-image-handler"]
         end
 
         subgraph Storage_Layer [📦 Data Persistence]
-            DB["💎 DynamoDB: blog-website-table"]
-            GSI["🔍 GSI: SlugIndex"]
-            S3_MEDIA["🖼️ S3 Bucket: blog-media-storage"]
-            DB --- GSI
+            DB["💎 DynamoDB: blog-table"]
+            S3_W["📄 S3 Bucket: blog-website"]
+            S3_M["🖼️ S3 Bucket: blog-media-storage"]
+            OAC["🔐 Origin Access Control (OAC)"]
         end
 
         subgraph IAM_Control [🛡️ IAM & Permissions]
-            RoleA["📜 Auth/Image IAM Role"]
-            RoleP["📜 Posts IAM Role"]
-            PolS3["✅ Policy: S3 PutObject"]
+            RoleA["📜 Auth/Image Role"]
+            RoleP["📜 Posts Role"]
 
             L_AUTH --- RoleA
             L_IMG --- RoleA
             L_POSTS --- RoleP
-            RoleA --- PolS3
         end
     end
 
     %% Flow Connections
-    User -- "1. API Requests" --> AGW
-    AGW -- "/signup" --> L_AUTH
-    AGW -- "/posts" --> L_POSTS
-    AGW -- "POST /files/presigned" --> L_IMG
+    User -- "1. Access Website (HTTPS)" --> CF_W
+    CF_W -- "Fetch Static Assets" --> OAC
+    OAC -- "Private Access" --> S3_W
 
-    L_AUTH -- "2. Sync Profile" --> DB
-    L_POSTS -- "3. CRUD & Slug Query" --> DB
-    L_IMG -- "4. Generate URL" --> S3_MEDIA
-    User -- "5. PUT Image (Presigned)" --> S3_MEDIA
+    User -- "2. API Requests" --> AGW
+    AGW -- "/files/presigned" --> L_IMG
 
-    %% Highlighted Changes (RED) for the new Image Infrastructure
-    style L_IMG fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style S3_MEDIA fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style PolS3 fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style RoleA fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    L_IMG -- "3. Generate URL" --> S3_M
+    User -- "4. PUT Image" --> S3_M
+
+    User -- "5. View Images (CDN)" --> CF_M
+    CF_M -- "Cached Media" --> OAC
+    OAC -- "Private Access" --> S3_M
+
+    %% Highlighted Changes (RED) for CloudFront and Security
+    style CF_W fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style CF_M fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style OAC fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style SHP fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style Invalidate fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style S3_W fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
 ```
 
 ### 📝 Key Infrastructure Notes

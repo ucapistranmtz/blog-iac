@@ -53,6 +53,8 @@ resource "aws_apigatewayv2_integration" "posts_integration" {
   payload_format_version = "2.0"
 }
 
+
+
 # --- ROUTES ---
 
 # 1. PUBLIC ROUTES (No Auth)
@@ -110,4 +112,44 @@ resource "aws_lambda_permission" "api_gw_posts" {
   principal     = "apigateway.amazonaws.com"
   qualifier     = "live"
   source_arn    = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
+}
+
+
+#-- image integration 
+
+resource "aws_apigatewayv2_integration" "image_integration" {
+  api_id                 = aws_apigatewayv2_api.blog_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = "${aws_lambda_function.image_handler.arn}:live"
+  payload_format_version = "2.0"
+}
+
+#-- public Route --#
+
+resource "aws_apigatewayv2_route" "image_presigned" {  
+  api_id             = aws_apigatewayv2_api.blog_api.id
+  route_key          = "POST /files/presigned"
+  target             = "integrations/${aws_apigatewayv2_integration.image_integration.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_auth.id
+}
+
+resource "aws_lambda_permission" "api_gw_image" {
+  statement_id  = "AllowExecutionFromAPIGatewayImage"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.image_handler.function_name
+  principal     = "apigateway.amazonaws.com"
+  qualifier     = "live" # Importante porque usas :live en la integración
+  source_arn    = "${aws_apigatewayv2_api.blog_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_alias" "image_handler_live" {
+  name             = "live"
+  description      = "Alias para el despliegue desde GitHub Actions"
+  function_name    = aws_lambda_function.image_handler.function_name
+  function_version = aws_lambda_function.image_handler.version
+  
+  lifecycle {
+    ignore_changes = [function_version] # Para que GH Actions lo maneje
+  }
 }

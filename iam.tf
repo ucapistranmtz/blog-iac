@@ -70,3 +70,19 @@ resource "aws_iam_role_policy_attachment" "attach_auth_policy" {
   role       = aws_iam_role.auth_lambda_role.name
   policy_arn = aws_iam_policy.auth_app_access.arn
 }
+
+ resource "aws_iam_role_policy" "image_s3_policy" {
+  name = "image-upload-policy"
+  role = aws_iam_role.auth_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = ["s3:PutObject"]
+        Effect   = "Allow"
+         Resource = "${aws_s3_bucket.blog_media.arn}/blog/images/*"
+      }
+    ]
+  })
+}

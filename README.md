@@ -37,7 +37,7 @@ graph TD
     end
 
     subgraph GitHub_Actions [🚀 GitHub Actions Pipeline]
-        Runner["🍊 Orange Pi Runner (Node 23)"]
+        Runner["🍊 Orange Pi Runner (Node 22/23)"]
         B["⚙️ Terraform Plan/Apply"]
         Runner --> B
         S1["📦 S3: Terraform State"] --- B
@@ -56,8 +56,9 @@ graph TD
         end
 
         subgraph Compute_Layer [🖥️ Compute]
-            L_AUTH["⚡ Lambda (Node): blog-auth-handler"]
+            L_AUTH["⚡ Lambda (Python): blog-auth-handler"]
             L_POSTS["🐍 Lambda (Python): blog-posts-handler"]
+            L_IMG["🟦 Lambda (TS/Node 22): blog-image-handler"]
 
             I -- "Trigger: Post-Confirmation" --> L_AUTH
         end
@@ -65,17 +66,19 @@ graph TD
         subgraph Storage_Layer [📦 Data Persistence]
             DB["💎 DynamoDB: blog-website-table"]
             GSI["🔍 GSI: SlugIndex"]
+            S3_MEDIA["🖼️ S3 Bucket: blog-media-storage"]
             DB --- GSI
         end
 
         subgraph IAM_Control [🛡️ IAM & Permissions]
-            RoleA["📜 Auth IAM Role"]
+            RoleA["📜 Auth/Image IAM Role"]
             RoleP["📜 Posts IAM Role"]
-            PolP["✅ Policy: DynamoDB Index Query"]
+            PolS3["✅ Policy: S3 PutObject"]
 
             L_AUTH --- RoleA
+            L_IMG --- RoleA
             L_POSTS --- RoleP
-            RoleP --- PolP
+            RoleA --- PolS3
         end
     end
 
@@ -83,16 +86,18 @@ graph TD
     User -- "1. API Requests" --> AGW
     AGW -- "/signup" --> L_AUTH
     AGW -- "/posts" --> L_POSTS
+    AGW -- "POST /files/presigned" --> L_IMG
+
     L_AUTH -- "2. Sync Profile" --> DB
     L_POSTS -- "3. CRUD & Slug Query" --> DB
+    L_IMG -- "4. Generate URL" --> S3_MEDIA
+    User -- "5. PUT Image (Presigned)" --> S3_MEDIA
 
-    %% Highlighted Changes (RED) for the new Post Infrastructure
-    style AGW fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style L_POSTS fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style RoleP fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style PolP fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style GSI fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
-    style Runner fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    %% Highlighted Changes (RED) for the new Image Infrastructure
+    style L_IMG fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style S3_MEDIA fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style PolS3 fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
+    style RoleA fill:#000,stroke:#ff0000,stroke-width:3px,color:#ff0000
 ```
 
 ### 📝 Key Infrastructure Notes

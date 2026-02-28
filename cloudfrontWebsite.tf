@@ -10,7 +10,7 @@ resource "aws_cloudfront_origin_access_control" "website_oac" {
 resource "aws_cloudfront_distribution" "website_distribution" {
   origin {
     domain_name              = aws_s3_bucket.tf-blog-website-bucket.bucket_regional_domain_name
-    origin_id                = "S3-Website-Frontend"
+    origin_id                = "${var.project_name}-frontend"
     origin_access_control_id = aws_cloudfront_origin_access_control.website_oac.id
   }
 
@@ -28,7 +28,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-Website-Frontend"
+    target_origin_id = "${var.project_name}-frontend"
 
     forwarded_values {
       query_string = false

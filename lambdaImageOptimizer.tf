@@ -8,16 +8,16 @@ data "archive_file" "image_optimizer_placeholder" {
   }
 }
 
-
 resource "aws_s3_object" "image_optimizer_place_holder_upload" {
   bucket = aws_s3_bucket.artifacts_storage.id
   key    = "image-optimizer-handler.zip"
-  source = data.archive_file.image_optimizer_placeholder
+
+  source       = data.archive_file.image_optimizer_placeholder.output_path
+  content_type = "application/zip"
   lifecycle {
     ignore_changes = [source, etag]
   }
 }
-
 resource "aws_lambda_function" "image_optimizer" {
   function_name = "${var.project_name}-image-optimizer"
   role          = aws_iam_role.optimizer_role.arn

@@ -22,7 +22,7 @@ resource "aws_lambda_function" "image_optimizer" {
   function_name = "${var.project_name}-image-optimizer"
   role          = aws_iam_role.optimizer_role.arn
   handler       = "index.handler" # Asegúrate de que tu build de GitHub Actions genere un index.js
-  runtime       = "nodejs20.x"
+  runtime       = "nodejs22.x"
   timeout       = 60   # Le subí un poco por si Sharp procesa imágenes pesadas
   memory_size   = 1024 # Sharp agradece mucho tener 1GB para ir rápido
 

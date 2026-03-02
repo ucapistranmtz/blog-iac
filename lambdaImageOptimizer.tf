@@ -33,7 +33,8 @@ resource "aws_lambda_function" "image_optimizer" {
 
   environment {
     variables = {
-      BUCKET_NAME = aws_s3_bucket.blog_media.id
+      BUCKET_NAME      = aws_s3_bucket.blog_media.id
+      OPTIMIZED_PREFIX = "blog/images/optimized/"
     }
   }
 
@@ -69,7 +70,7 @@ resource "aws_s3_bucket_notification" "on_upload" {
   lambda_function {
     lambda_function_arn = aws_lambda_function.image_optimizer.arn
     events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = "uploads/" # MUY IMPORTANTE: Evita bucles infinitos
+    filter_prefix       = "blog/images/uploads/"
   }
 
   depends_on = [aws_lambda_permission.allow_s3_trigger]
